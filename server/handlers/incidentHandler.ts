@@ -27,7 +27,9 @@ export async function postIncident(req: Request, res: Response) {
       // timestamp and id are also generated internally
     } as any); // small cast because createIncidentRedis expects everything except id/timestamp/embedding
 
-    return res.status(201).json(incident);
+    // Exclude embedding from response (it's 1024 floats and not useful for API consumers)
+    const { embedding, ...response } = incident;
+    return res.status(201).json(response);
   } catch (err) {
     console.error("postIncident error:", err);
     return res.status(500).json({ error: "internal_error" });
