@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { redis } from "../utils/redisClient";
+import { generateIncidentEmbedding } from "../utils/embedding";
 
 export interface Incident {
   id: string;
@@ -9,62 +10,72 @@ export interface Incident {
   rootCauseSummary: string;
   patchDiff?: string;
   timestamp: number;
-  embedding: number[];
+  embedding: number[]; // VoyageAI vector
   tags: Record<string, string>;
 }
 
-// Create & persist a new incident in Redis
+// Create & persist using basic Redis SET
 export async function createIncidentRedis(
-  data: Omit<Incident, "id" | "timestamp">
+  data: Omit<Incident, "id" | "timestamp" | "embedding">
 ): Promise<Incident> {
+  // 1. Build input text for semantic meaning:
+  // Error + service + env + human summary of cause.
+  const embeddingInput = [
+    data.description,
+    data.service,
+    data.environment,
+    data.rootCauseSummary,
+  ].join(" | ");
+
+  // 2. Get embedding from Voyage
+  const vector = await generateIncidentEmbedding(embeddingInput);
+
+  // 3. Final incident object
   const incident: Incident = {
     ...data,
     id: randomUUID(),
     timestamp: Date.now(),
+    embedding: vector,
+    tags: {
+      service: data.service,
+      environment: data.environment,
+    },
   };
 
-  // Store as JSON string in Redis
   await redis.set(`incident:${incident.id}`, JSON.stringify(incident));
 
   return incident;
 }
 
-// Fetch all incidents
+// Fetch ALL incidents from Redis (unchanged logic except types)
 export async function getAllIncidentsRedis(): Promise<Incident[]> {
-  // 1. get all keys with prefix incident:
   const keys = await redis.keys("incident:*");
   if (keys.length === 0) return [];
 
-  // 2. fetch all values
-  const values = await redis.mGet(keys);
+  const values = await redis.mGet(keys); // (string | null)[]
 
-  // 3. parse JSON strings
   const incidents: Incident[] = [];
-  for (const value of values) {
-    if (value) {
-      try {
-        incidents.push(JSON.parse(value));
-      } catch (err) {
-        console.error("Failed to parse incident:", err);
-      }
+  for (const v of values) {
+    if (!v) continue;
+    try {
+      const parsed = JSON.parse(v) as Incident;
+      incidents.push(parsed);
+    } catch (e) {
+      console.error("failed to parse incident json:", e);
     }
   }
 
   return incidents;
 }
 
-// Fetch a single incident
 export async function getIncidentByIdRedis(
   id: string
 ): Promise<Incident | null> {
-  const data = await redis.get(`incident:${id}`);
-  
-  if (!data) return null;
-
+  const raw = await redis.get(`incident:${id}`);
+  if (!raw) return null;
   try {
-    return JSON.parse(data) as Incident;
-  } catch (err) {
-    console.error("Failed to parse incident:", err);
+    return JSON.parse(raw) as Incident;
+  } catch {
     return null;
   }
 }

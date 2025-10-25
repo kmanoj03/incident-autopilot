@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { getAllIncidentsRedis } from "../models/incident";
-import { embedText } from "../utils/embedding";
+import { generateIncidentEmbedding } from "../utils/embedding";
 import { findSimilarIncidents } from "../utils/retrieval";
 
 export async function diagnoseIncident(req: Request, res: Response) {
@@ -12,15 +12,15 @@ export async function diagnoseIncident(req: Request, res: Response) {
         .json({ error: "description, service, environment are required" });
     }
 
-    // generate query embedding using same stub
-    const queryEmbedding = embedText(
-      `${description} | ${service} | ${environment}`
+    // build the query string same style as we did during ingestion
+    const queryEmbedding = await generateIncidentEmbedding(
+      [description, service, environment].join(" | ")
     );
 
-    // pull known incidents from Redis Cloud
+    // pull all known incidents from Redis
     const allIncidents = await getAllIncidentsRedis();
 
-    // filter + cosine similarity rank
+    // same filter+rank logic, which uses cosine similarity
     const matches = findSimilarIncidents(
       queryEmbedding,
       service,
@@ -45,7 +45,7 @@ export async function diagnoseIncident(req: Request, res: Response) {
       summary: top.rootCauseSummary,
       patchDiffDraft:
         top.patchDiff ||
-        "// no stored diff; likely same null/undefined guard pattern from similar issues",
+        "// no stored diff; likely same null/undefined guard pattern or input validation used in similar prod issues",
       confidence:
         top.similarity > 0.9 ? "high" : top.similarity > 0.7 ? "medium" : "low",
     };

@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { createIncidentRedis, getAllIncidentsRedis } from "../models/incident";
-import { embedText } from "../utils/embedding";
 
 export async function postIncident(req: Request, res: Response) {
   try {
@@ -14,22 +13,19 @@ export async function postIncident(req: Request, res: Response) {
       });
     }
 
-    const embeddingInput = [
-      description,
-      service,
-      environment,
-      rootCauseSummary,
-    ].join(" | ");
-
     const incident = await createIncidentRedis({
       description,
       service,
       environment,
       rootCauseSummary,
       patchDiff,
-      embedding: embedText(embeddingInput),
-      tags: { service, environment },
-    });
+      tags: {
+        service,
+        environment,
+      },
+      // embedding is now generated internally
+      // timestamp and id are also generated internally
+    } as any); // small cast because createIncidentRedis expects everything except id/timestamp/embedding
 
     return res.status(201).json(incident);
   } catch (err) {
