@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 
 import incidentsRoute from "./routes/incidentRoute";
+import diagnoseRoute from "./routes/diagnoseRoute";
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.get("/healthz", (_req, res) => {
 });
 
 app.use("/incidents", incidentsRoute);
+app.use("/diagnose", diagnoseRoute);
 
 app.listen(PORT, () => {
   console.log(`⚡ Server running at http://localhost:${PORT}`);
