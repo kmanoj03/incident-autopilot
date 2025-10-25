@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 
 import incidentsRoute from "./routes/incidentRoute";
 import diagnoseRoute from "./routes/diagnoseRoute";
+import patchRoute from "./routes/patchRoute";
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.get("/healthz", (_req, res) => {
 
 app.use("/incidents", incidentsRoute);
 app.use("/diagnose", diagnoseRoute);
+app.use("/patch", patchRoute);
 
 app.listen(PORT, () => {
   console.log(`⚡ Server running at http://localhost:${PORT}`);
