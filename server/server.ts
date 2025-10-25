@@ -9,6 +9,7 @@ import diagnoseRoute from "./routes/diagnoseRoute";
 import patchRoute from "./routes/patchRoute";
 
 import { initRedis } from "./utils/redisClient";
+import { ensureIncidentIndex } from "./utils/createIndex";
 
 const app = express();
 app.use(cors());
@@ -26,7 +27,13 @@ app.use("/diagnose", diagnoseRoute);
 app.use("/patch", patchRoute);
 
 async function start() {
-  await initRedis(); // <- connect to Redis Cloud here
+  // 1. Connect to Redis
+  await initRedis();
+  
+  // 2. Ensure the vector search index exists
+  await ensureIncidentIndex();
+  
+  // 3. Start the server
   app.listen(PORT, () => {
     console.log(`⚡ Server running at http://localhost:${PORT}`);
   });
