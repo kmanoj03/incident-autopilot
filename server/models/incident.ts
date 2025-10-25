@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { redis } from "../utils/redisClient";
 
 export interface Incident {
   id: string;
@@ -12,33 +13,58 @@ export interface Incident {
   tags: Record<string, string>;
 }
 
-// internal in-memory store
-const incidents: Incident[] = [];
-
-// Create
-export function createIncident(
+// Create & persist a new incident in Redis
+export async function createIncidentRedis(
   data: Omit<Incident, "id" | "timestamp">
-): Incident {
+): Promise<Incident> {
   const incident: Incident = {
     ...data,
     id: randomUUID(),
     timestamp: Date.now(),
   };
-  incidents.push(incident);
+
+  // Store as JSON string in Redis
+  await redis.set(`incident:${incident.id}`, JSON.stringify(incident));
+
   return incident;
 }
 
-// Read all
-export function getAllIncidents(): Incident[] {
+// Fetch all incidents
+export async function getAllIncidentsRedis(): Promise<Incident[]> {
+  // 1. get all keys with prefix incident:
+  const keys = await redis.keys("incident:*");
+  if (keys.length === 0) return [];
+
+  // 2. fetch all values
+  const values = await redis.mGet(keys);
+
+  // 3. parse JSON strings
+  const incidents: Incident[] = [];
+  for (const value of values) {
+    if (value) {
+      try {
+        incidents.push(JSON.parse(value));
+      } catch (err) {
+        console.error("Failed to parse incident:", err);
+      }
+    }
+  }
+
   return incidents;
 }
 
-// Read one
-export function getIncidentById(id: string): Incident | undefined {
-  return incidents.find((i) => i.id === id);
-}
+// Fetch a single incident
+export async function getIncidentByIdRedis(
+  id: string
+): Promise<Incident | null> {
+  const data = await redis.get(`incident:${id}`);
+  
+  if (!data) return null;
 
-// (utility for testing / resetting if you ever need it)
-export function _clearIncidents() {
-  incidents.length = 0;
+  try {
+    return JSON.parse(data) as Incident;
+  } catch (err) {
+    console.error("Failed to parse incident:", err);
+    return null;
+  }
 }

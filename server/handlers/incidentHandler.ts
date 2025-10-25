@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import { createIncident, getAllIncidents } from "../models/incident";
+import { createIncidentRedis, getAllIncidentsRedis } from "../models/incident";
 import { embedText } from "../utils/embedding";
 
-export function postIncident(req: Request, res: Response) {
+export async function postIncident(req: Request, res: Response) {
   try {
     const { description, service, environment, rootCauseSummary, patchDiff } =
       req.body || {};
@@ -14,7 +14,6 @@ export function postIncident(req: Request, res: Response) {
       });
     }
 
-    // build embedding input
     const embeddingInput = [
       description,
       service,
@@ -22,17 +21,14 @@ export function postIncident(req: Request, res: Response) {
       rootCauseSummary,
     ].join(" | ");
 
-    const incident = createIncident({
+    const incident = await createIncidentRedis({
       description,
       service,
       environment,
       rootCauseSummary,
       patchDiff,
       embedding: embedText(embeddingInput),
-      tags: {
-        service,
-        environment,
-      },
+      tags: { service, environment },
     });
 
     return res.status(201).json(incident);
@@ -42,7 +38,12 @@ export function postIncident(req: Request, res: Response) {
   }
 }
 
-export function listIncidentsHandler(_req: Request, res: Response) {
-  const data = getAllIncidents();
-  return res.json(data);
+export async function listIncidentsHandler(_req: Request, res: Response) {
+  try {
+    const data = await getAllIncidentsRedis();
+    return res.json(data);
+  } catch (err) {
+    console.error("listIncidents error:", err);
+    return res.status(500).json({ error: "internal_error" });
+  }
 }

@@ -1,12 +1,14 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import express from "express";
 import cors from "cors";
-import dotenv from "dotenv";
 
 import incidentsRoute from "./routes/incidentRoute";
 import diagnoseRoute from "./routes/diagnoseRoute";
 import patchRoute from "./routes/patchRoute";
 
-dotenv.config();
+import { initRedis } from "./utils/redisClient";
 
 const app = express();
 app.use(cors());
@@ -23,6 +25,11 @@ app.use("/incidents", incidentsRoute);
 app.use("/diagnose", diagnoseRoute);
 app.use("/patch", patchRoute);
 
-app.listen(PORT, () => {
-  console.log(`⚡ Server running at http://localhost:${PORT}`);
-});
+async function start() {
+  await initRedis(); // <- connect to Redis Cloud here
+  app.listen(PORT, () => {
+    console.log(`⚡ Server running at http://localhost:${PORT}`);
+  });
+}
+
+start();
