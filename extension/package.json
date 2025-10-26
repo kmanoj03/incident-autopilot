@@ -1,0 +1,54 @@
+{
+  "name": "incident-autopilot",
+  "displayName": "Incident Autopilot",
+  "description": "AI-powered incident diagnosis with semantic memory",
+  "version": "0.0.1",
+  "publisher": "incident-autopilot",
+  "engines": {
+    "vscode": "^1.105.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:incidentAssist"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "incident-autopilot",
+          "title": "Incident Autopilot",
+          "icon": "resources/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "incident-autopilot": [
+        {
+          "id": "incidentAssist",
+          "name": "Incident Assist",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "incidentAutopilot.pickFile",
+        "title": "Pick Log File"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.23",
+    "@types/vscode": "^1.105.0",
+    "typescript": "^5.9.3"
+  }
+}

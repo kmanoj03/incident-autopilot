@@ -7,6 +7,7 @@ import cors from "cors";
 import incidentsRoute from "./routes/incidentRoute";
 import diagnoseRoute from "./routes/diagnoseRoute";
 import patchRoute from "./routes/patchRoute";
+import githubRoute from "./routes/githubRoute";
 
 import { initRedis } from "./utils/redisClient";
 import { ensureIncidentIndex } from "./utils/createIndex";
@@ -25,6 +26,7 @@ app.get("/healthz", (_req, res) => {
 app.use("/incidents", incidentsRoute);
 app.use("/diagnose", diagnoseRoute);
 app.use("/patch", patchRoute);
+app.use("/github", githubRoute);
 
 async function start() {
   // 1. Connect to Redis
